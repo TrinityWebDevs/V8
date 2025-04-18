@@ -1,0 +1,33 @@
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const User = require('../model/user.js');
+const dotenv = require('dotenv');
+dotenv.config();
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  const user = await User.findById(id);
+  done(null, user);
+});
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+},
+  async (accessToken, refreshToken, profile, done) => {
+    const existingUser = await User.findOne({ googleId: profile.id });
+    if (existingUser) return done(null, existingUser);
+
+    const newUser = await User.create({
+      googleId: profile.id,
+      name: profile.displayName,
+      email: profile.emails[0].value,
+      photo: profile.photos[0].value
+    });
+    return done(null, newUser);
+  }
+));
