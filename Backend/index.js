@@ -1,63 +1,82 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const session = require('express-session');
-const passport = require('passport');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-require('dotenv').config();
+import express from 'express';
+import mongoose from 'mongoose';
+import session from 'express-session';
+import passport from 'passport';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import authRouter from './Routes/Auth.Routes.js';
+import './auth/google.js'; // passport strategy
+import http from 'http'; // ✅ Import Node.js http module
+import { WebSocketServer } from 'ws';
+import projectRouter from './Routes/Collaboration.Routes.js'; // Import your project router
 
-require('./auth/google'); // passport strategy
+dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const server = http.createServer(app);
+const PORT = process.env.PORT || 3000;
+export const wss = new WebSocketServer({ server });
+// MongoDB connection
+dbConnect();
+async function dbConnect() {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ Connected to MongoDB');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
 
-// MongoDB connect
-mongoose.connect(process.env.MONGO_URI).then(() => {
-  console.log("Connected to MongoDB");
-});
+// Middleware setup
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+);
+app.use(express.json());             // Parses JSON request bodies
+app.use(cookieParser());             // Parses cookies
 
-// Middleware
-app.use(cookieParser());
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-app.use(session({
-  secret: 'your_secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false } // true in production
-}));
+// Session & Passport
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'default_secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }         // set secure: true in production (HTTPS)
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Routes
-app.get('/', (req, res) => res.send('Auth Server Running'));
+app.use('/auth', authRouter);
+app.use('/project', projectRouter); 
 
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
 
-app.get('/auth/google/callback',
-  passport.authenticate('google', {
-    failureRedirect: '/login',
-    successRedirect: 'http://localhost:5173/dashboard'
-  })
-);
 
+
+
+
+
+
+
+
+
+// Protected user endpoint
 app.get('/api/user', (req, res) => {
   if (req.isAuthenticated()) {
-    res.json(req.user);
-  } else {
-    res.status(401).json({ message: 'Not Authenticated' });
+    return res.json(req.user);
   }
+  res.status(401).json({ message: 'Not Authenticated' });
 });
 
-app.get('/logout', (req, res) => {
-  req.logout(() => {
-    res.clearCookie('connect.sid');
-    res.redirect('http://localhost:5173');
+// Start server using the HTTP instance
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
   });
-});
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+  

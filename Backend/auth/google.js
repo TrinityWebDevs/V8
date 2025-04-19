@@ -1,33 +1,56 @@
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const User = require('../model/user.js');
-const dotenv = require('dotenv');
+// src/auth/google.js
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import dotenv from 'dotenv';
+import User from '../model/user.js';
+
 dotenv.config();
 
+// Serialize user -> decides what to store in session
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
+// Deserialize user -> retrieves full user from session store
 passport.deserializeUser(async (id, done) => {
-  const user = await User.findById(id);
-  done(null, user);
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
 });
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.CLIENT_ID,
-  clientSecret: process.env.CLIENT_SECRET,
-  callbackURL: "/auth/google/callback"
-},
-  async (accessToken, refreshToken, profile, done) => {
-    const existingUser = await User.findOne({ googleId: profile.id });
-    if (existingUser) return done(null, existingUser);
+// Configure Google OAuth strategy
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET,
+      callbackURL: '/auth/google/callback'
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        // Check if user already exists
+        let existingUser = await User.findOne({ googleId: profile.id });
+        if (existingUser) {
+          return done(null, existingUser);
+        }
+        // If new user, create record
+        const newUser = await User.create({
+          googleId: profile.id,
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          photo: profile.photos[0].value,
+          accessToken,
+          refreshToken
+        });
+        return done(null, newUser);
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  )
+);
 
-    const newUser = await User.create({
-      googleId: profile.id,
-      name: profile.displayName,
-      email: profile.emails[0].value,
-      photo: profile.photos[0].value
-    });
-    return done(null, newUser);
-  }
-));
+export default passport;
