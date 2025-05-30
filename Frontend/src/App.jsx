@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Route, Routes } from 'react-router-dom';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import ProjectDetails from './components/ProjectDetails';
 axios.defaults.withCredentials = true;
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
    <Routes>
       <Route path="/" element={<Auth />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/project/:projectId" element={<ProjectDetails />} />
     </Routes>
   );
 }

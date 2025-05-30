@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 
 import Project from "../model/project.model.js";
 import User from "../model/user.js"; // Ensure you have a User model imported
+import shortLink from "../model/shortLink.model.js"; 
 
 const router = express.Router();
 
@@ -155,5 +156,37 @@ router.post("/get-member-details", async (req, res) => {
     res.status(500).json({ message: "❌ Failed to fetch member details" });
   }
 });
+
+
+router.get("/get-project/:projectId", async (req, res) => {
+  try {
+      if(req.isAuthenticated()===false){
+          return res.status(401).json({ message: "Not Authenticated" });
+      }
+
+      const { projectId } = req.params;
+
+      const project = await Project.findById(projectId).populate("members", "name email photo");
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+       // Check if user is a member
+      if (!project.members.some(member => member._id.equals(req.user._id))) {
+        return res.status(403).json({ message: "You are not authorized to view this project" });
+      }
+
+      const shortLinks = await shortLink.find({ project: projectId });
+
+      res.status(200).json({
+        project,
+        shortLinks,
+      });
+
+  } catch (error) {
+    console.error("Error fetching project:", error);
+    res.status(500).json({ message: "Failed to fetch project" });
+  }
+})
 
 export default router;
