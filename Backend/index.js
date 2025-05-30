@@ -12,6 +12,7 @@ import { WebSocketServer } from 'ws';
 import projectRouter from './Routes/Collaboration.Routes.js'; 
 import ShortLinkRouter from './Routes/link.routes.js'; 
 import redirectRouter from './Routes/redirect.routes.js';
+import AnalyticsRouter from './Routes/analytics.routes.js'; // Import analytics routes
 
 
 
@@ -60,6 +61,7 @@ app.use(passport.session());
 app.use('/auth', authRouter);
 app.use('/project', projectRouter); 
 app.use('/project/shortlink', ShortLinkRouter); 
+app.use('/analytics',AnalyticsRouter);
 
 // Redirect route for short links
 app.use("/",redirectRouter);

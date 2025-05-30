@@ -11,7 +11,7 @@ const Sidebar = ({ activeTab, setActiveTab, project }) => {
       <div className="px-6 py-6">
         <h1 className="text-2xl font-bold mb-2">{project.name}</h1>
 
-        {/* 👥 Members */}
+        {/* Members */}
         <div className="flex -space-x-3 overflow-hidden mt-4">
           {project.members.map((member) => (
             <img

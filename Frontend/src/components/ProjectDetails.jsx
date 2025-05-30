@@ -4,7 +4,7 @@ import axios from 'axios'
 
 import Sidebar from '../components/Sidebar'
 import LinkManager from './LinkManager'
-import AnalyticsPanel from './AnalyticsPanel'
+import AnalyticsPage from './AnalyticsPage'
 
 const ProjectDetails = () => {
   const { projectId } = useParams()
@@ -43,7 +43,7 @@ const ProjectDetails = () => {
           <LinkManager project={project} shortLinks={shortLinks} setShortLinks={setShortLinks} />
         )}
         {activeTab === 'analytics' && (
-          <AnalyticsPanel project={project} shortLinks={shortLinks} />
+          <AnalyticsPage project={project} shortLinks={shortLinks} />
         )}
       </main>
     </div>
