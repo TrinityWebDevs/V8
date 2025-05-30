@@ -6,13 +6,12 @@ const BACKEND = 'http://localhost:3000';
 
 export default function ShortLinkPage() {
   const { shortCode } = useParams();
-  const [stage, setStage] = useState('loading'); // loading, public, protected, expired, notfound
+  const [stage, setStage] = useState('loading');
   const [error, setError] = useState('');
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState('');
 
   useEffect(() => {
-    // 1) fetch metadata
     axios.get(`${BACKEND}/project/shortlink/info/${shortCode}`, { withCredentials: true })
       .then(res => {
         if (res.data.expired) {
@@ -20,9 +19,10 @@ export default function ShortLinkPage() {
         } else if (res.data.requiresPassword) {
           setStage('protected');
         } else {
-          setStage('public');
-          // 2) public: navigate → backend GET /:shortCode will redirect
-          window.location.href = `${BACKEND}/${shortCode}`;
+          setStage('redirecting'); // show loading before redirect
+          setTimeout(() => {
+            window.location.href = `${BACKEND}/${shortCode}`;
+          }, 100); 
         }
       })
       .catch(err => {
@@ -35,63 +35,85 @@ export default function ShortLinkPage() {
       });
   }, [shortCode]);
 
-  // handle password submit
   const submitPassword = () => {
     axios.post(
       `${BACKEND}/project/shortlink/verify-password/${shortCode}`,
       { password: pwInput },
       { withCredentials: true }
     )
-    .then(res => {
-      window.location.href = res.data.redirectTo;
-    })
-    .catch(err => {
-      setPwError(err.response?.data?.message || 'Incorrect password');
-    });
+    .then(res => window.location.href = res.data.redirectTo)
+    .catch(err => setPwError(err.response?.data?.message || 'Incorrect password'));
   };
 
-  // render by stage
-  if (stage === 'loading') {
-    return <FullPage message="Loading…" />;
-  }
-  if (stage === 'notfound') {
-    return <FullPage message="Link not found." />;
-  }
-  if (stage === 'expired') {
-    return <FullPage message="This link has expired." />;
-  }
-  if (stage === 'error') {
-    return <FullPage message={`Error: ${error}`} />;
-  }
-  // protected:
-  return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
-      <div className="bg-gray-800 p-6 rounded-lg w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-semibold">Password Required</h1>
-        <p className="text-gray-400">{shortCode}</p>
-        <input
-          type="password"
-          placeholder="Enter password"
-          value={pwInput}
-          onChange={e => { setPwInput(e.target.value); setPwError(''); }}
-          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
-        />
-        {pwError && <p className="text-red-500">{pwError}</p>}
-        <button
-          onClick={submitPassword}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 p-2 rounded"
-        >
-          Unlock
-        </button>
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      submitPassword();
+    }
+  };
+
+  if (stage === 'loading' || stage === 'redirecting') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-white text-sm opacity-70">
+            {stage === 'loading' ? 'Loading...' : 'Redirecting...'}
+          </span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (stage === 'notfound') return <FullPage msg="Link not found" />;
+  if (stage === 'expired') return <FullPage msg="Link expired" />;
+  if (stage === 'error') return <FullPage msg={`Error: ${error}`} />;
+
+  if (stage === 'protected') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-xs space-y-6">
+          <div className="text-center">
+            <h1 className="text-white text-lg font-light">Enter Password</h1>
+          </div>
+
+          <div className="space-y-4">
+            <input
+              type="password"
+              placeholder="Password"
+              value={pwInput}
+              onChange={e => {
+                setPwInput(e.target.value);
+                setPwError('');
+              }}
+              onKeyPress={handleKeyPress}
+              className="w-full p-3 bg-black border border-gray-800 rounded text-white placeholder-gray-500 focus:border-white focus:outline-none transition-colors"
+            />
+
+            {pwError && (
+              <p className="text-red-400 text-sm text-center">{pwError}</p>
+            )}
+
+            <button
+              onClick={submitPassword}
+              className="w-full p-3 bg-white text-black rounded font-medium hover:bg-gray-200 transition-colors"
+            >
+              Unlock
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null; // fallback
 }
 
-function FullPage({ message }) {
+function FullPage({ msg }) {
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center text-xl">
-      {message}
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-white text-center">
+        <p className="text-lg font-light">{msg}</p>
+      </div>
     </div>
   );
 }

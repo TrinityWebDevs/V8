@@ -1,9 +1,10 @@
-// src/components/LinkManager.jsx
+import toast, { Toaster } from 'react-hot-toast';
+import { CheckSquare, Copy } from 'lucide-react'; 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const BACKEND = 'http://localhost:3000';
-const domains = ['localhost:3000']; // your backend base domains
+const domains = [window.location.host];
 
 const generateRandomCode = () =>
   Math.random().toString(36).substring(2, 8);
@@ -13,14 +14,18 @@ const LinkManager = ({ project }) => {
   const [links, setLinks] = useState([]);
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(null);
 
+  
   // Form state
   const [originalUrl, setOriginalUrl] = useState('');
   const [selectedDomain, setSelectedDomain] = useState(domains[0]);
   const [customCode, setCustomCode] = useState('');
   const [comments, setComments] = useState('');
-  const [password, setPassword] = useState('');        // still captured but not handled here
+  const [password, setPassword] = useState('');        
   const [expiresAt, setExpiresAt] = useState('');
+
+
 
   // Fetch links
   useEffect(() => {
@@ -57,8 +62,15 @@ const LinkManager = ({ project }) => {
       // reload
       const res = await axios.get(`${BACKEND}/project/get-project/${projectId}`, { withCredentials: true });
       setLinks(res.data.shortLinks || []);
+
+      toast.success('Link created successfully!');
     } catch (err) {
-      console.error(err);
+        console.error(err);
+        if (err.response?.status === 409 && err.response.data?.message) {
+        toast.error(err.response.data.message);
+        } else {
+        toast.error('Failed to create link.');
+        }
     } finally {
       setLoadingCreate(false);
     }
@@ -70,6 +82,8 @@ const LinkManager = ({ project }) => {
     try {
       await axios.delete(`${BACKEND}/project/shortlink/delete/${id}`, { withCredentials: true });
       setLinks(links.filter(l => l._id !== id));
+
+      toast.success('Link deleted');
     } catch (err) {
       console.error(err);
     }
@@ -138,7 +152,7 @@ const LinkManager = ({ project }) => {
                 >↻</button>
               </div>
               <textarea
-                placeholder="Comments (optional)"
+                placeholder="Comments"
                 value={comments}
                 onChange={e => setComments(e.target.value)}
                 className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
@@ -179,16 +193,33 @@ const LinkManager = ({ project }) => {
           >
             <div>
               <p className="font-medium text-white">{link.originalUrl}</p>
-              <div className="mt-1">
+              <div className="mt-1 flex items-center space-x-2">
                 <span className="text-indigo-400 font-semibold">{link.domain}</span>
                 <span className="text-white">/</span>
                 <span
-                  onClick={() => handleClick(link)}
-                  className="text-indigo-400 font-mono underline cursor-pointer"
+                    onClick={() => handleClick(link)}
+                    className="text-indigo-400 font-mono underline cursor-pointer"
                 >
-                  {link.shortCode}
+                    {link.shortCode}
                 </span>
-              </div>
+                 <button
+                    onClick={() => {
+                        const shortUrl = `http://${link.domain}/${link.shortCode}`;
+                        navigator.clipboard.writeText(shortUrl);
+                        setCopiedCode(link._id); // Set this link as copied
+                        toast.success('Link copied!');
+                        setTimeout(() => setCopiedCode(null), 1500); // Reset after 1.5s
+                    }}
+                    title="Copy link"
+                    className="text-sm text-gray-400 hover:text-white px-1"
+                    >
+                    {copiedCode === link._id ? (
+                        <CheckSquare size={16} className="text-green-400" />
+                    ) : (
+                        <Copy size={16} />
+                    )}
+                 </button>
+                </div>
               {link.comments && <p className="text-gray-400 italic mt-1">{link.comments}</p>}
               {link.expiresAt && (
                 <p className="text-xs text-gray-500 mt-1">

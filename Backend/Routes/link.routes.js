@@ -104,6 +104,32 @@ router.delete('/delete/:shortLinkId', async (req, res) => {
   }
 });
 
+// Info about a short link
+router.get('/info/:shortCode', async (req, res) => {
+    const { shortCode } = req.params;
+  
+    try {
+      const link = await ShortLink.findOne({ shortCode });
+  
+      if (!link) {
+        return res.status(404).json({ message: 'Short link not found' });
+      }
+  
+      const now = new Date();
+      const expired = link.expiresAt && now > link.expiresAt;
+      const requiresPassword = !!link.password;
+  
+      return res.json({
+        originalUrl: link.originalUrl, // optional, for future use
+        requiresPassword,
+        expired,
+        comments: link.comments || null, // optional
+      });
+    } catch (err) {
+      console.error('Error fetching link info:', err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
 
 // Verify password for password-protected links
 router.post('/verify-password/:shortCode', async (req, res) => {
