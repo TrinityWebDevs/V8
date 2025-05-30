@@ -1,193 +1,213 @@
+// src/components/LinkManager.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const domains = ['localhost:5173'];
+const BACKEND = 'http://localhost:3000';
+const domains = ['localhost:3000']; // your backend base domains
 
-const generateRandomCode = () => {
-  return Math.random().toString(36).substring(2, 8);
-};
+const generateRandomCode = () =>
+  Math.random().toString(36).substring(2, 8);
 
-const LinkManager = ({ projectId }) => {
+const LinkManager = ({ project }) => {
+  const projectId = project._id;
+  const [links, setLinks] = useState([]);
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Form state
   const [originalUrl, setOriginalUrl] = useState('');
   const [selectedDomain, setSelectedDomain] = useState(domains[0]);
   const [customCode, setCustomCode] = useState('');
   const [comments, setComments] = useState('');
-  const [links, setLinks] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [password, setPassword] = useState('');        // still captured but not handled here
+  const [expiresAt, setExpiresAt] = useState('');
 
-  const fetchLinks = async () => {
-    try {
-      const res = await axios.get(`/api/project/get-project/${projectId}`);
-      setLinks(res.data.shortLinks || []);
-    } catch (err) {
-      console.error("Error fetching links:", err);
-    }
-  };
-
+  // Fetch links
   useEffect(() => {
-    if (projectId) fetchLinks();
+    axios.get(`${BACKEND}/project/get-project/${projectId}`, { withCredentials: true })
+      .then(res => setLinks(res.data.shortLinks || []))
+      .catch(console.error);
   }, [projectId]);
 
-  const isCodeUnique = (code) => {
-    return !links.some(link => link.shortCode === code);
-  };
-
-  const handleGenerateRandomCode = () => {
-    let code;
-    do {
-      code = generateRandomCode();
-    } while (!isCodeUnique(code));
-    setCustomCode(code);
-  };
-
-  const handleCreateLink = async (e) => {
+  // Create
+  const handleCreate = async e => {
     e.preventDefault();
-    setLoading(true);
+    setLoadingCreate(true);
     try {
-      await axios.post('/api/shortlink/create', {
-        projectId,
-        originalUrl,
-        customCode: customCode.trim() || null,
-        domain: selectedDomain,
-        comments: comments.trim() || null,
-      });
+      await axios.post(
+        `${BACKEND}/project/shortlink/create`,
+        {
+          projectId,
+          originalUrl,
+          customCode: customCode.trim() || null,
+          domain: selectedDomain,
+          comments: comments.trim() || null,
+          password: password.trim() || null,
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        },
+        { withCredentials: true }
+      );
+      // reset form
       setOriginalUrl('');
       setCustomCode('');
       setComments('');
-      setShowModal(false);
-      fetchLinks();
+      setPassword('');
+      setExpiresAt('');
+      setShowCreateModal(false);
+      // reload
+      const res = await axios.get(`${BACKEND}/project/get-project/${projectId}`, { withCredentials: true });
+      setLinks(res.data.shortLinks || []);
     } catch (err) {
-      console.error('Error creating link:', err);
+      console.error(err);
     } finally {
-      setLoading(false);
+      setLoadingCreate(false);
     }
   };
 
+  // Delete
+  const handleDelete = async id => {
+    if (!confirm('Delete this link?')) return;
+    try {
+      await axios.delete(`${BACKEND}/project/shortlink/delete/${id}`, { withCredentials: true });
+      setLinks(links.filter(l => l._id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Click handler
+  const handleClick = link => {
+    const url = `http://${link.domain}/${link.shortCode}`;
+    window.location.href = url;
+  };
+
   return (
-    <div className="space-y-8">
-      <div className="flex justify-end">
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Short Links</h1>
         <button
-          onClick={() => setShowModal(true)}
-          className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+          onClick={() => setShowCreateModal(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded"
         >
           + Create Link
         </button>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-md shadow-md w-full max-w-lg relative space-y-6">
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4">
+          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4 relative">
             <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-2 right-3 text-gray-400 hover:text-white text-xl"
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h2 className="text-xl font-semibold mb-4">New link</h2>
-            <form onSubmit={handleCreateLink} className="space-y-4">
-
-              <div>
-                <label className="block mb-1 font-medium">Destination URL</label>
+              onClick={() => setShowCreateModal(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white"
+            >×</button>
+            <h2 className="text-xl font-semibold">New Link</h2>
+            <form onSubmit={handleCreate} className="space-y-3">
+              <input
+                type="url"
+                required
+                placeholder="Original URL"
+                value={originalUrl}
+                onChange={e => setOriginalUrl(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+              />
+              <select
+                value={selectedDomain}
+                onChange={e => setSelectedDomain(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+              >
+                {domains.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <div className="flex space-x-2">
                 <input
-                  type="url"
-                  required
-                  value={originalUrl}
-                  onChange={(e) => setOriginalUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="w-full p-2 border rounded"
+                  type="text"
+                  placeholder="Custom code (optional)"
+                  value={customCode}
+                  onChange={e => setCustomCode(e.target.value)}
+                  className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded"
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    let c;
+                    do { c = generateRandomCode(); } while (links.some(l => l.shortCode === c));
+                    setCustomCode(c);
+                  }}
+                  className="px-3 rounded bg-gray-600 hover:bg-gray-500"
+                >↻</button>
               </div>
-
-              <div>
-                <label className="block mb-1 font-medium">Short Link</label>
-                <div className="flex items-center space-x-2">
-                  <select
-                    value={selectedDomain}
-                    onChange={(e) => setSelectedDomain(e.target.value)}
-                    className="border bg-gray-900 rounded px-3 py-2"
-                  >
-                    {domains.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="text"
-                    value={customCode}
-                    onChange={(e) => setCustomCode(e.target.value)}
-                    placeholder="Custom code"
-                    className="flex-grow p-2 border rounded"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleGenerateRandomCode}
-                    className="bg-gray-700 px-3 py-2 rounded hover:bg-gray-300"
-                    title="Generate random code"
-                  >
-                    ↻
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-1 font-medium">Comments</label>
-                <textarea
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="Add comments about this link"
-                  className="w-full p-2 border rounded resize-none"
-                  rows={3}
-                />
-              </div>
-
+              <textarea
+                placeholder="Comments (optional)"
+                value={comments}
+                onChange={e => setComments(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                rows={2}
+              />
+              <input
+                type="password"
+                placeholder="Password (optional)"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+              />
+              <input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={e => setExpiresAt(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                min={new Date().toISOString().slice(0,16)}
+              />
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+                disabled={loadingCreate}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded"
               >
-                {loading ? 'Creating...' : 'Create link'}
+                {loadingCreate ? 'Creating…' : 'Create Link'}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Existing Links</h3>
-        {links.length === 0 ? (
-          <p className="text-gray-500">No links yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {links.map((link) => (
-              <li
-                key={link._id}
-                className="flex justify-between items-center p-3 bg-gray-100 rounded"
-              >
-                <div>
-                  <a
-                    href={link.originalUrl}
-                    className="text-blue-600 underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {link.originalUrl}
-                  </a>
-                  <p className="text-sm text-gray-600">
-                    Short Code: {link.shortCode}
-                  </p>
-                  {link.comments && <p className="text-xs text-gray-500 italic">"{link.comments}"</p>}
-                </div>
-                <span className="text-sm text-gray-500">
-                  Clicks: {link.clickCount}
+      {/* Links List */}
+      <ul className="space-y-4">
+        {links.map(link => (
+          <li
+            key={link._id}
+            className="bg-gray-800 p-4 rounded-lg flex justify-between items-start"
+          >
+            <div>
+              <p className="font-medium text-white">{link.originalUrl}</p>
+              <div className="mt-1">
+                <span className="text-indigo-400 font-semibold">{link.domain}</span>
+                <span className="text-white">/</span>
+                <span
+                  onClick={() => handleClick(link)}
+                  className="text-indigo-400 font-mono underline cursor-pointer"
+                >
+                  {link.shortCode}
                 </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              </div>
+              {link.comments && <p className="text-gray-400 italic mt-1">{link.comments}</p>}
+              {link.expiresAt && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Expires: {new Date(link.expiresAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col items-end space-y-2">
+              <span className="text-gray-400">Clicks: {link.clickCount}</span>
+              <button
+                onClick={() => handleDelete(link._id)}
+                className="text-red-500 hover:text-red-700"
+              >
+                🗑️
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
