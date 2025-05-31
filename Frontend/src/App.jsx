@@ -16,7 +16,7 @@ function App() {
       <Route path="/" element={<Auth />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/project/:projectId" element={<ProjectDetails />} />   
-      <Route path="/:shortCode" element={<ShortLinkPage />} />
+      <Route path="/:shortCode" element={<ShortLinkPage />} /> 
 
     </Routes>
     </>
