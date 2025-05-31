@@ -33,12 +33,14 @@ export default function AnalyticsPage({ project, shortCode }) {
   const [error, setError] = useState('')
   const [timeRange, setTimeRange] = useState('7d') // '24h', '7d', '30d', '1y'
 
-  // Tabs for “Devices” box (not needed, devices are shown together)
-  // Tabs for “Links / Destinations” (moved to bottom)
+  // Tabs for “Short Links / Destinations”
   const [leftTab, setLeftTab] = useState('links')
 
   // Tabs for “Countries / Cities / Continents”
   const [rightTab, setRightTab] = useState('countries')
+
+  // **NEW**: Tab for “Devices” (Browsers / OS / Device Types)
+  const [deviceTab, setDeviceTab] = useState('browsers')
 
   // Whenever projectId, shortCode, or timeRange changes, refetch EVERYTHING:
   useEffect(() => {
@@ -183,35 +185,58 @@ export default function AnalyticsPage({ project, shortCode }) {
     ? [{ originalUrl: data.originalUrl, clicks: data.totalClicks }]
     : (data.links || []).map((l) => ({ originalUrl: l.originalUrl, clicks: l.clickCount }))
 
-  // ─────────── Helper: Render List with Horizontal Bars ───────────
-  const renderDataList = (title, items, maxItems = 5) => {
-    if (!items || items.length === 0) {
-      return (
-        <div className="bg-gray-800 rounded-md p-3 border border-gray-700 mb-4">
-          <h3 className="font-medium text-gray-200 mb-2">{title}</h3>
-          <p className="text-gray-500 text-sm">No data available</p>
-        </div>
-      )
-    }
-    const maxCount = Math.max(...items.slice(0, maxItems).map((i) => i.count))
+  // ─────────── Helper: Render a Generic Two‐Column Table ───────────
+  // NOTE: the <h3> title is removed so that “tab → column header” is the only label.
+  const renderTwoColumnTable = (/* title, */ items, keyLabel, showFlag = false) => {
     return (
       <div className="bg-gray-800 rounded-md p-3 border border-gray-700 mb-4">
-        <h3 className="font-medium text-gray-200 mb-2">{title}</h3>
-        <div className="space-y-2">
-          {items.slice(0, maxItems).map((item, i) => (
-            <div key={`${item._id}-${i}`} className="flex items-center">
-              <div className="w-32 truncate text-sm text-gray-200">{item._id || 'Unknown'}</div>
-              <div className="flex-1 mx-2">
-                <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="absolute top-0 left-0 h-full bg-blue-500"
-                    style={{ width: `${(item.count / maxCount) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <div className="w-10 text-right text-sm text-gray-200">{item.count}</div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-gray-700">
+              <tr>
+                <th className="py-2 px-3 text-left text-gray-400 text-sm">
+                  {keyLabel}
+                </th>
+                <th className="py-2 px-3 text-right text-gray-400 text-sm">
+                  Clicks
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length > 0 ? (
+                items.map((item, idx) => (
+                  <tr
+                    key={`${item._id || idx}`}
+                    className="border-b border-gray-700 hover:bg-gray-800/50"
+                  >
+                    <td className="py-2 px-3 text-gray-200 truncate max-w-xs flex items-center space-x-2">
+                      {/* If this is “Countries”, show a tiny flag. */}
+                      {showFlag && item._id && (
+                        <img
+                          src={`https://flagcdn.com/16x12/${item._id
+                            .toLowerCase()
+                            .slice(0, 2)}.png`}
+                          alt=""
+                          className="w-4 h-3 rounded-sm"
+                          onError={(e) => (e.target.style.display = 'none')}
+                        />
+                      )}
+                      <span>{item._id || 'Unknown'}</span>
+                    </td>
+                    <td className="py-2 px-3 text-right text-gray-200">
+                      {item.count}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={2} className="py-4 text-center text-gray-500">
+                    No data.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     )
@@ -224,7 +249,9 @@ export default function AnalyticsPage({ project, shortCode }) {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold">
-              {data.singleLink ? `Analytics for /${data.shortCode}` : 'Project Analytics'}
+              {data.singleLink
+                ? `Analytics for /${data.shortCode}`
+                : 'Project Analytics'}
             </h1>
             {data.singleLink && (
               <p className="text-gray-400 text-sm">{data.originalUrl}</p>
@@ -237,7 +264,11 @@ export default function AnalyticsPage({ project, shortCode }) {
               className="appearance-none bg-gray-800 text-gray-200 py-2 pl-3 pr-8 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {timeFilters.map((f) => (
-                <option key={f.value} value={f.value} className="bg-gray-800 text-white">
+                <option
+                  key={f.value}
+                  value={f.value}
+                  className="bg-gray-800 text-white"
+                >
                   {f.label}
                 </option>
               ))}
@@ -258,12 +289,48 @@ export default function AnalyticsPage({ project, shortCode }) {
 
         {/* ─────────── Two-Column Grid: Devices & Locations ─────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Column 1: Devices */}
-          <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 shadow-md space-y-4">
-            <h2 className="text-lg font-semibold mb-3">Devices</h2>
-            {renderDataList('Browsers', topBrowsers)}
-            {renderDataList('Operating Systems', topOS)}
-            {renderDataList('Device Types', topDeviceTypes)}
+          {/* Column 1: Devices (Tabbed) */}
+          <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 shadow-md">
+            <h2 className="text-lg font-semibold mb-4">Devices</h2>
+            <div className="flex space-x-4 mb-4">
+              <button
+                onClick={() => setDeviceTab('browsers')}
+                className={`px-4 py-1 rounded-t-md border-b-2 ${
+                  deviceTab === 'browsers'
+                    ? 'border-indigo-500 text-white'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Browsers
+              </button>
+              <button
+                onClick={() => setDeviceTab('os')}
+                className={`px-4 py-1 rounded-t-md border-b-2 ${
+                  deviceTab === 'os'
+                    ? 'border-indigo-500 text-white'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Operating Systems
+              </button>
+              <button
+                onClick={() => setDeviceTab('deviceTypes')}
+                className={`px-4 py-1 rounded-t-md border-b-2 ${
+                  deviceTab === 'deviceTypes'
+                    ? 'border-indigo-500 text-white'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Device Types
+              </button>
+            </div>
+            {/* Show exactly one table, depending on deviceTab */}
+            {deviceTab === 'browsers' &&
+              renderTwoColumnTable(topBrowsers, 'Browser')}
+            {deviceTab === 'os' &&
+              renderTwoColumnTable(topOS, 'OS')}
+            {deviceTab === 'deviceTypes' &&
+              renderTwoColumnTable(topDeviceTypes, 'Device Type')}
           </div>
 
           {/* Column 2: Countries / Cities / Continents */}
@@ -300,89 +367,13 @@ export default function AnalyticsPage({ project, shortCode }) {
                 Continents
               </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b border-gray-700">
-                  <tr>
-                    <th className="py-2 px-3 text-left text-gray-400 text-sm">
-                      {rightTab.charAt(0).toUpperCase() + rightTab.slice(1, -1)}
-                    </th>
-                    <th className="py-2 px-3 text-right text-gray-400 text-sm">
-                      Clicks
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rightTab === 'countries' ? (
-                    rightCountries.length > 0 ? (
-                      rightCountries.map((item) => (
-                        <tr
-                          key={item._id}
-                          className="border-b border-gray-700 hover:bg-gray-800/50"
-                        >
-                          <td className="py-2 px-3 text-gray-200 truncate max-w-xs flex items-center space-x-2">
-                            {item._id && (
-                              <img
-                                src={`https://flagcdn.com/16x12/${item._id
-                                  .toLowerCase()
-                                  .slice(0, 2)}.png`}
-                                alt=""
-                                className="w-4 h-3 rounded-sm"
-                                onError={(e) => (e.target.style.display = 'none')}
-                              />
-                            )}
-                            <span>{item._id || 'Unknown'}</span>
-                          </td>
-                          <td className="py-2 px-3 text-right text-gray-200">{item.count}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={2} className="py-4 text-center text-gray-500">
-                          No country data.
-                        </td>
-                      </tr>
-                    )
-                  ) : rightTab === 'cities' ? (
-                    rightCities.length > 0 ? (
-                      rightCities.map((item, idx) => (
-                        <tr
-                          key={`${item._id}-${idx}`}
-                          className="border-b border-gray-700 hover:bg-gray-800/50"
-                        >
-                          <td className="py-2 px-3 text-gray-200 truncate max-w-xs">
-                            {item._id || 'Unknown'}
-                          </td>
-                          <td className="py-2 px-3 text-right text-gray-200">{item.count}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={2} className="py-4 text-center text-gray-500">
-                          No city data.
-                        </td>
-                      </tr>
-                    )
-                  ) : rightContinents.length > 0 ? (
-                    rightContinents.map((item) => (
-                      <tr
-                        key={item._id}
-                        className="border-b border-gray-700 hover:bg-gray-800/50"
-                      >
-                        <td className="py-2 px-3 text-gray-200">{item._id || 'Unknown'}</td>
-                        <td className="py-2 px-3 text-right text-gray-200">{item.count}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={2} className="py-4 text-center text-gray-500">
-                        No continent data.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {/* Show exactly one table for locations */}
+            {rightTab === 'countries' &&
+              renderTwoColumnTable(rightCountries, 'Country', /* showFlag */ true)}
+            {rightTab === 'cities' &&
+              renderTwoColumnTable(rightCities, 'City')}
+            {rightTab === 'continents' &&
+              renderTwoColumnTable(rightContinents, 'Continent')}
           </div>
         </div>
 
@@ -416,13 +407,21 @@ export default function AnalyticsPage({ project, shortCode }) {
                 <tr>
                   {leftTab === 'links' ? (
                     <>
-                      <th className="py-2 px-3 text-left text-gray-400 text-sm">Link</th>
-                      <th className="py-2 px-3 text-right text-gray-400 text-sm">Clicks</th>
+                      <th className="py-2 px-3 text-left text-gray-400 text-sm">
+                        Link
+                      </th>
+                      <th className="py-2 px-3 text-right text-gray-400 text-sm">
+                        Clicks
+                      </th>
                     </>
                   ) : (
                     <>
-                      <th className="py-2 px-3 text-left text-gray-400 text-sm">Destination</th>
-                      <th className="py-2 px-3 text-right text-gray-400 text-sm">Clicks</th>
+                      <th className="py-2 px-3 text-left text-gray-400 text-sm">
+                        Destination
+                      </th>
+                      <th className="py-2 px-3 text-right text-gray-400 text-sm">
+                        Clicks
+                      </th>
                     </>
                   )}
                 </tr>
@@ -435,8 +434,12 @@ export default function AnalyticsPage({ project, shortCode }) {
                         key={item.shortCode}
                         className="border-b border-gray-700 hover:bg-gray-800/50"
                       >
-                        <td className="py-2 px-3 text-indigo-400 font-mono">/{item.shortCode}</td>
-                        <td className="py-2 px-3 text-right text-gray-200">{item.clicks}</td>
+                        <td className="py-2 px-3 text-indigo-400 font-mono">
+                          /{item.shortCode}
+                        </td>
+                        <td className="py-2 px-3 text-right text-gray-200">
+                          {item.clicks}
+                        </td>
                       </tr>
                     ))
                   ) : (
@@ -453,8 +456,12 @@ export default function AnalyticsPage({ project, shortCode }) {
                         key={`${item.originalUrl}-${idx}`}
                         className="border-b border-gray-700 hover:bg-gray-800/50"
                       >
-                        <td className="py-2 px-3 text-gray-200 truncate max-w-xs">{item.originalUrl}</td>
-                        <td className="py-2 px-3 text-right text-gray-200">{item.clicks}</td>
+                        <td className="py-2 px-3 text-gray-200 truncate max-w-xs">
+                          {item.originalUrl}
+                        </td>
+                        <td className="py-2 px-3 text-right text-gray-200">
+                          {item.clicks}
+                        </td>
                       </tr>
                     ))
                   ) : (
