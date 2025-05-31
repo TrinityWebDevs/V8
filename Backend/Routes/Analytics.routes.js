@@ -1,4 +1,3 @@
-// routes/analytics.routes.js
 import express from 'express';
 import mongoose from 'mongoose';
 import ShortLink from '../model/shortLink.model.js';
@@ -6,51 +5,102 @@ import ClickLog from '../model/clickLog.model.js';
 
 const router = express.Router();
 
-/**
- * GET /project/:projectId/analytics
- *
- * Query parameters:
- *   - shortCode (optional): if present, return analytics for that single link.
- *                           If absent, return project-wide analytics.
- */
+// Helper to calculate date range
+const getDateRange = (timeRange) => {
+  const now = new Date();
+  let startDate = new Date(now);
+  
+  switch (timeRange) {
+    case '24h':
+      startDate.setDate(now.getDate() - 1);
+      break;
+    case '7d':
+      startDate.setDate(now.getDate() - 7);
+      break;
+    case '30d':
+      startDate.setDate(now.getDate() - 30);
+      break;
+    case '1y':
+      startDate.setFullYear(now.getFullYear() - 1);
+      break;
+    default:
+      startDate = new Date(0); // All time
+  }
+  
+  return startDate;
+};
+
+// Helper to get date format for grouping
+const getDateFormat = (timeRange) => {
+  switch (timeRange) {
+    case '24h':
+      return '%Y-%m-%d %H:00';
+    case '7d':
+    case '30d':
+      return '%Y-%m-%d';
+    case '1y':
+      return '%Y-%m';
+    default:
+      return '%Y-%m-%d';
+  }
+};
+
 router.get('/project/:projectId', async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { shortCode } = req.query;
+    const { shortCode, timeRange = '7d' } = req.query;
+    const startDate = getDateRange(timeRange);
+    const dateFormat = getDateFormat(timeRange);
 
     // Validate projectId
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
       return res.status(400).json({ message: 'Invalid project ID' });
     }
 
-    // If a shortCode was provided, return “individual link” analytics
+    // Common match filter
+    const baseMatch = { timestamp: { $gte: startDate } };
+
+    // If a shortCode was provided
     if (shortCode) {
-      // 1) Find that single ShortLink under this project
       const link = await ShortLink.findOne({ project: projectId, shortCode });
       if (!link) {
-        return res
-          .status(404)
-          .json({ message: 'Link not found in this project' });
+        return res.status(404).json({ message: 'Link not found in this project' });
       }
 
-      // 2) Total clicks for this link (from ClickLog)
-      const totalClicks = await ClickLog.countDocuments({
-        shortLink: link._id,
-      });
+      // Add to base match
+      baseMatch.shortLink = link._id;
 
-      // 3) Top 5 browsers for this link
+      // 1) Total clicks for this link
+      const totalClicks = await ClickLog.countDocuments(baseMatch);
+
+      // 2) Top browsers
       const topBrowsers = await ClickLog.aggregate([
-        { $match: { shortLink: link._id } },
+        { $match: baseMatch },
         { $group: { _id: '$browser', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 },
       ]);
 
-      // 4) Top 5 countries for this link
+      // 3) Top OS
+      const topOS = await ClickLog.aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$os', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]);
+
+      // 4) Device types (mobile/desktop/tablet)
+      const topDeviceTypes = await ClickLog.aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$deviceType', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]);
+
+      // 5) Top countries
       const topCountries = await ClickLog.aggregate([
         {
           $match: {
-            shortLink: link._id,
+            ...baseMatch,
             'geo.country': { $exists: true, $ne: '' },
           },
         },
@@ -59,41 +109,56 @@ router.get('/project/:projectId', async (req, res) => {
         { $limit: 5 },
       ]);
 
-      // 5) Clicks‐over‐time for last 7 days (grouped by YYYY-MM-DD)
-      const now = new Date();
-      const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
-
-      const clicksLast7 = await ClickLog.aggregate([
+      // 6) Top cities
+      const topCities = await ClickLog.aggregate([
         {
           $match: {
-            shortLink: link._id,
-            timestamp: { $gte: sevenDaysAgo },
+            ...baseMatch,
+            'geo.city': { $exists: true, $ne: '' },
           },
+        },
+        { $group: { _id: '$geo.city', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]);
+
+      // 7) Top continents
+      const topContinents = await ClickLog.aggregate([
+        {
+          $match: {
+            ...baseMatch,
+            'geo.continent': { $exists: true, $ne: '' },
+          },
+        },
+        { $group: { _id: '$geo.continent', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]);
+
+      // 8) Last click timestamp
+      const lastClick = await ClickLog.findOne(baseMatch)
+        .sort({ timestamp: -1 })
+        .select('timestamp');
+
+      // 9) Clicks-over-time
+      const clicksTrend = await ClickLog.aggregate([
+        {
+          $match: baseMatch,
         },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            _id: {
+              $dateToString: {
+                format: dateFormat,
+                date: '$timestamp',
+                timezone: 'UTC'
+              }
+            },
             count: { $sum: 1 },
           },
         },
         { $sort: { '_id': 1 } },
       ]);
-
-      // Fill in missing days with 0
-      const dateMap = new Map();
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const dateStr = d.toISOString().slice(0, 10);
-        dateMap.set(dateStr, 0);
-      }
-      clicksLast7.forEach(item => {
-        dateMap.set(item._id, item.count);
-      });
-      const clicksTrend = Array.from(dateMap)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([date, count]) => ({ date, count }));
 
       return res.json({
         singleLink: true,
@@ -103,37 +168,57 @@ router.get('/project/:projectId', async (req, res) => {
         expiresAt: link.expiresAt,
         totalClicks,
         topBrowsers,
+        topOS,
+        topDeviceTypes,
         topCountries,
+        topCities,
+        topContinents,
+        lastClick: lastClick?.timestamp,
         clicksTrend,
       });
     }
 
-    // Otherwise: return “project-wide” analytics
-    // 1) Fetch all links in this project
+    // Project-wide analytics
     const links = await ShortLink.find({ project: projectId })
       .select('_id shortCode originalUrl clickCount createdAt expiresAt')
       .sort({ clickCount: -1 });
 
     const linkIds = links.map(l => l._id);
 
-    // 2) Total clicks across all links
-    const totalClicks = await ClickLog.countDocuments({
-      shortLink: { $in: linkIds },
-    });
+    // Update base match
+    baseMatch.shortLink = { $in: linkIds };
 
-    // 3) Top 5 browsers across all links
+    // 1) Total clicks across all links
+    const totalClicks = await ClickLog.countDocuments(baseMatch);
+
+    // 2) Top browsers
     const topBrowsers = await ClickLog.aggregate([
-      { $match: { shortLink: { $in: linkIds } } },
+      { $match: baseMatch },
       { $group: { _id: '$browser', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 5 },
     ]);
 
-    // 4) Top 5 countries across all links
+    // 3) Top OS
+    const topOS = await ClickLog.aggregate([
+      { $match: baseMatch },
+      { $group: { _id: '$os', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // 4) Device types
+    const topDeviceTypes = await ClickLog.aggregate([
+      { $match: baseMatch },
+      { $group: { _id: '$deviceType', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    // 5) Top countries
     const topCountries = await ClickLog.aggregate([
       {
         $match: {
-          shortLink: { $in: linkIds },
+          ...baseMatch,
           'geo.country': { $exists: true, $ne: '' },
         },
       },
@@ -142,49 +227,72 @@ router.get('/project/:projectId', async (req, res) => {
       { $limit: 5 },
     ]);
 
-    // 5) Clicks‐over‐time (last 7 days) across all links
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-
-    const clicksLast7 = await ClickLog.aggregate([
+    // 6) Top cities
+    const topCities = await ClickLog.aggregate([
       {
         $match: {
-          shortLink: { $in: linkIds },
-          timestamp: { $gte: sevenDaysAgo },
+          ...baseMatch,
+          'geo.city': { $exists: true, $ne: '' },
         },
+      },
+      { $group: { _id: '$geo.city', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // 7) Top continents
+    const topContinents = await ClickLog.aggregate([
+      {
+        $match: {
+          ...baseMatch,
+          'geo.continent': { $exists: true, $ne: '' },
+        },
+      },
+      { $group: { _id: '$geo.continent', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // 8) Top performing link
+    const topLink = links.length > 0 
+      ? { 
+          shortCode: links[0].shortCode, 
+          clickCount: links[0].clickCount 
+        } 
+      : null;
+
+    // 9) Clicks-over-time
+    const clicksTrend = await ClickLog.aggregate([
+      {
+        $match: baseMatch,
       },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+          _id: {
+            $dateToString: {
+              format: dateFormat,
+              date: '$timestamp',
+              timezone: 'UTC'
+            }
+          },
           count: { $sum: 1 },
         },
       },
       { $sort: { '_id': 1 } },
     ]);
 
-    // Fill in missing days with 0
-    const dateMap = new Map();
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      dateMap.set(dateStr, 0);
-    }
-    clicksLast7.forEach(item => {
-      dateMap.set(item._id, item.count);
-    });
-    const clicksTrend = Array.from(dateMap)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, count]) => ({ date, count }));
-
     return res.json({
       singleLink: false,
       totalLinks: links.length,
       totalClicks,
-      links,       // array of { _id, shortCode, originalUrl, clickCount, createdAt, expiresAt }
+      links,
       topBrowsers,
+      topOS,
+      topDeviceTypes,
       topCountries,
+      topCities,
+      topContinents,
+      topLink,
       clicksTrend,
     });
   } catch (err) {

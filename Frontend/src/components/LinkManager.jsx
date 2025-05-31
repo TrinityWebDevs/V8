@@ -2,7 +2,12 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import toast, { Toaster } from 'react-hot-toast'
-import { CheckSquare, Copy } from 'lucide-react'
+import {
+  CheckSquare,
+  Copy,
+  Trash2,
+  BarChart2,
+} from 'lucide-react'
 
 const BACKEND = 'http://localhost:3000'
 const domains = [window.location.host]
@@ -11,9 +16,9 @@ const generateRandomCode = () => Math.random().toString(36).substring(2, 8)
 
 export default function LinkManager({
   project,
-  shortLinks,      
-  setShortLinks,    
-  onViewAnalytics,  
+  shortLinks,
+  setShortLinks,
+  onViewAnalytics,
 }) {
   const projectId = project._id
 
@@ -97,9 +102,10 @@ export default function LinkManager({
         `${BACKEND}/project/shortlink/delete/${id}`,
         { withCredentials: true }
       )
-      setLinks(links.filter((l) => l._id !== id))
+      const updated = links.filter((l) => l._id !== id)
+      setLinks(updated)
       if (setShortLinks) {
-        setShortLinks(links.filter((l) => l._id !== id))
+        setShortLinks(updated)
       }
       toast.success('Link deleted')
     } catch (err) {
@@ -127,10 +133,10 @@ export default function LinkManager({
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Short Links</h1>
+        <h1 className="text-3xl font-bold">Short Links</h1>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded"
+          className="bg-indigo-600 hover:bg-indigo-700 px-5 py-2 rounded-lg shadow-lg transition"
         >
           + Create Link
         </button>
@@ -139,14 +145,14 @@ export default function LinkManager({
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4 relative">
+          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4 relative shadow-xl">
             <button
               onClick={() => setShowCreateModal(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-white"
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl"
             >
               ×
             </button>
-            <h2 className="text-xl font-semibold">New Link</h2>
+            <h2 className="text-2xl font-semibold">New Link</h2>
             <form onSubmit={handleCreate} className="space-y-3">
               <input
                 type="url"
@@ -154,12 +160,12 @@ export default function LinkManager({
                 placeholder="Original URL"
                 value={originalUrl}
                 onChange={(e) => setOriginalUrl(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <select
                 value={selectedDomain}
                 onChange={(e) => setSelectedDomain(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {domains.map((d) => (
                   <option key={d} value={d}>
@@ -173,7 +179,7 @@ export default function LinkManager({
                   placeholder="Custom code (optional)"
                   value={customCode}
                   onChange={(e) => setCustomCode(e.target.value)}
-                  className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded"
+                  className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <button
                   type="button"
@@ -184,7 +190,7 @@ export default function LinkManager({
                     } while (links.some((l) => l.shortCode === c))
                     setCustomCode(c)
                   }}
-                  className="px-3 rounded bg-gray-600 hover:bg-gray-500"
+                  className="px-3 rounded bg-gray-600 hover:bg-gray-500 transition"
                 >
                   ↻
                 </button>
@@ -193,7 +199,7 @@ export default function LinkManager({
                 placeholder="Comments"
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 rows={2}
               />
               <input
@@ -201,19 +207,19 @@ export default function LinkManager({
                 placeholder="Password (optional)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <input
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 min={new Date().toISOString().slice(0, 16)}
               />
               <button
                 type="submit"
                 disabled={loadingCreate}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg shadow transition disabled:opacity-50"
               >
                 {loadingCreate ? 'Creating…' : 'Create Link'}
               </button>
@@ -227,11 +233,11 @@ export default function LinkManager({
         {links.map((link) => (
           <li
             key={link._id}
-            className="bg-gray-800 p-4 rounded-lg flex justify-between items-start"
+            className="bg-gray-800 p-4 rounded-lg flex justify-between items-start shadow-md hover:bg-gray-800/75 transition"
           >
-            <div className="flex flex-col">
-              <p className="font-medium text-white">{link.originalUrl}</p>
-              <div className="mt-1 flex items-center space-x-2">
+            <div className="flex flex-col w-2/3">
+              <p className="font-medium text-white truncate">{link.originalUrl}</p>
+              <div className="mt-2 flex items-center space-x-2">
                 <span className="text-indigo-400 font-semibold">{link.domain}</span>
                 <span className="text-white">/</span>
                 <span
@@ -249,36 +255,40 @@ export default function LinkManager({
                     setTimeout(() => setCopiedCode(null), 1500)
                   }}
                   title="Copy link"
-                  className="text-sm text-gray-400 hover:text-white px-1"
+                  className="text-gray-400 hover:text-white transition"
                 >
                   {copiedCode === link._id ? (
-                    <CheckSquare size={16} className="text-green-400" />
+                    <CheckSquare size={18} className="text-green-400" />
                   ) : (
-                    <Copy size={16} />
+                    <Copy size={18} />
                   )}
                 </button>
               </div>
-              {link.comments && <p className="text-gray-400 italic mt-1">{link.comments}</p>}
+              {link.comments && (
+                <p className="text-gray-400 italic mt-2">{link.comments}</p>
+              )}
               {link.expiresAt && (
                 <p className="text-xs text-gray-500 mt-1">
                   Expires: {new Date(link.expiresAt).toLocaleString()}
                 </p>
               )}
             </div>
-            <div className="flex flex-col items-end space-y-2">
+            <div className="flex flex-col items-end space-y-3">
               <span className="text-gray-400">Clicks: {link.clickCount}</span>
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleDelete(link._id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="p-2 rounded-full bg-gray-700 hover:bg-red-600 transition"
+                  title="Delete link"
                 >
-                  🗑️
+                  <Trash2 size={18} className="text-red-500 hover:text-white" />
                 </button>
                 <button
                   onClick={() => viewAnalytics(link)}
-                  className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm transition"
+                  className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md shadow transition"
                 >
-                  View Analytics
+                  <BarChart2 size={16} className="text-white" />
+                  <span className="text-white text-sm">Analytics</span>
                 </button>
               </div>
             </div>
