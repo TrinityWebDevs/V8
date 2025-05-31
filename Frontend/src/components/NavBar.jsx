@@ -16,13 +16,13 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-md">
+    <nav className="bg-gray-800 shadow-md">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between h-16">
           {/* Logo and app name */}
           <div className="flex items-center">
             <a href="/" className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-gray-800">R8</span>
+              <span className="text-xl font-bold text-white">V8</span>
             </a>
           </div>
           
@@ -34,28 +34,21 @@ export default function Navbar() {
                   <img 
                     src={user.photo} 
                     alt="Profile" 
-                    className="w-8 h-8 rounded-full object-cover border border-gray-200" 
+                    className="w-8 h-8 rounded-full object-cover" 
                   />
-                  <span className="ml-2 text-sm font-medium text-gray-700">
+                  <span className="ml-2 text-sm font-medium text-white">
                     {user.name}
                   </span>
                 </div>
                 <button 
                   onClick={logout}
-                  className="bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded transition duration-300"
+                  className="bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-4 rounded transition duration-300"
                 >
                   Logout
                 </button>
               </div>
             )}
-            {!user && (
-              <a 
-                href="/" 
-                className="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-4 rounded transition duration-300"
-              >
-                Login
-              </a>
-            )}
+           
           </div>
         </div>
       </div>

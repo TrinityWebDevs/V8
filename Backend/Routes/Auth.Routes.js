@@ -5,7 +5,7 @@ import passport from 'passport';
 const router = express.Router();
 
 // Routes
-router.get('/', (req, res) => res.send('Auth Server Running'));
+router.get('/', (req, res) => res.json({user:req.user}));
 
 router.get(
   '/google',

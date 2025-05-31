@@ -9,7 +9,13 @@ import authRouter from './Routes/Auth.Routes.js';
 import './auth/google.js'; // passport strategy
 import http from 'http'; // ✅ Import Node.js http module
 import { WebSocketServer } from 'ws';
-import projectRouter from './Routes/Collaboration.Routes.js'; // Import your project router
+import projectRouter from './Routes/Collaboration.Routes.js'; 
+import ShortLinkRouter from './Routes/link.routes.js'; 
+import redirectRouter from './Routes/redirect.routes.js';
+import AnalyticsRouter from './Routes/analytics.routes.js'; // Import analytics routes
+
+
+
 
 dotenv.config();
 
@@ -54,6 +60,11 @@ app.use(passport.session());
 // Routes
 app.use('/auth', authRouter);
 app.use('/project', projectRouter); 
+app.use('/project/shortlink', ShortLinkRouter); 
+app.use('/analytics',AnalyticsRouter);
+
+// Redirect route for short links
+app.use("/",redirectRouter);
 
 
 
