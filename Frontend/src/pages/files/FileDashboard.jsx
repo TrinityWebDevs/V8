@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useProjectFiles } from '../hooks/useProjectFiles';
-import { formatFileSize, formatDate, getFileIcon } from '../utils/format';
+import { useProjectFiles } from '../../hooks/useProjectFiles';
+import { formatFileSize, formatDate, getFileIcon } from '../../utils/format';
 import toast from 'react-hot-toast';
-
+import { IoTrashBinOutline } from "react-icons/io5";
+import { FaRegCopy } from "react-icons/fa";
 export default function FileDashboard() {
   const { projectId } = useOutletContext();
   const {
@@ -187,15 +188,15 @@ export default function FileDashboard() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
                     onClick={() => copyToClipboard(file.shareId)}
-                    className="text-blue-600 hover:text-blue-900 mr-4"
+                    className="text-blue-600 text-[20px] hover:text-blue-900 mr-4"
                   >
-                    Copy Link
+                    <FaRegCopy />
                   </button>
                   <button
                     onClick={() => handleDeleteClick(file)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-600 text-[20px] hover:text-red-900"
                   >
-                    Delete
+                    <IoTrashBinOutline />
                   </button>
                 </td>
               </tr>

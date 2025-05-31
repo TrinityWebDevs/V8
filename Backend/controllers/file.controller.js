@@ -3,6 +3,7 @@ import File from '../model/file.model.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
 import cloudinary from '../config/cloudinary.js';
 import axios from 'axios';
+import mongoose from 'mongoose';
 
 export async function uploadFile(req, res, next) {
   try {
@@ -37,15 +38,27 @@ export async function uploadFile(req, res, next) {
 
 export async function listProjectFiles(req, res, next) {
   try {
-    // 1️⃣ Fetch all project files
     const files = await File.find({ project: req.params.projectId })
                           .select('-__v -project')
                           .sort('-uploadDate');
 
-    // 2️⃣ Aggregate total storage used
+    // Convert string ID to ObjectId for proper comparison
+    const projectId = new mongoose.Types.ObjectId(req.params.projectId);
+
+    // Debug: Log the aggregation pipeline
     const agg = await File.aggregate([
-      { $match: { project: req.params.projectId } },
-      { $group: { _id: null, totalUsed: { $sum: '$size' } } }
+      { 
+        $match: { 
+          project: projectId 
+        } 
+      },
+      { 
+        $group: { 
+          _id: null, 
+          totalUsed: { $sum: '$size' },
+          count: { $sum: 1 }  // Add count to verify if any documents match
+        } 
+      }
     ]);
     const usedBytes = (agg[0] && agg[0].totalUsed) || 0;
 
@@ -60,6 +73,7 @@ export async function listProjectFiles(req, res, next) {
       files
     });
   } catch (err) {
+    console.error('Error in listProjectFiles:', err);
     next(err);
   }
 }

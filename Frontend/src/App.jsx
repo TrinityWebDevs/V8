@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Sidebar from './components/Sidebar';
-import FileDashboard from './components/FileDashboard';
+import FileDashboard from './pages/files/FileDashboard';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
-import SharedFile from './components/SharedFile';
+import SharedFile from './pages/files/SharedFile';
 
 function ProjectLayout() {
   const { projectId } = useParams();

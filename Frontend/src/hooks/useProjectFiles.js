@@ -18,6 +18,8 @@ export function useProjectFiles(projectId) {
       setError(null);
       const data = await fileService.getProjectFiles(projectId);
       setFiles(data.files);
+      console.log(data.used);
+      
       setUsed(data.used);
       setQuota(data.quota);
       setRemaining(data.remaining);
