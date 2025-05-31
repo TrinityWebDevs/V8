@@ -10,7 +10,7 @@ import './auth/google.js'; // passport strategy
 import http from 'http'; // ✅ Import Node.js http module
 import { WebSocketServer } from 'ws';
 import projectRouter from './Routes/Collaboration.Routes.js'; // Import your project router
-
+import fileRouter from './Routes/file.routes.js';
 dotenv.config();
 
 const app = express();
@@ -54,17 +54,7 @@ app.use(passport.session());
 // Routes
 app.use('/auth', authRouter);
 app.use('/project', projectRouter); 
-
-
-
-
-
-
-
-
-
-
-
+app.use('/file', fileRouter);
 // Protected user endpoint
 app.get('/api/user', (req, res) => {
   if (req.isAuthenticated()) {
