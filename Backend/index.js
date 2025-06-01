@@ -16,7 +16,7 @@ import AnalyticsRouter from './Routes/analytics.routes.js'; // Import analytics 
 
 
 
-
+import fileRouter from './Routes/file.routes.js';
 dotenv.config();
 
 const app = express();
@@ -65,17 +65,7 @@ app.use('/analytics',AnalyticsRouter);
 
 // Redirect route for short links
 app.use("/",redirectRouter);
-
-
-
-
-
-
-
-
-
-
-
+app.use('/file', fileRouter);
 // Protected user endpoint
 app.get('/api/user', (req, res) => {
   if (req.isAuthenticated()) {
