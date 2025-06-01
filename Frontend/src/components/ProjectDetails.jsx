@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
-
 import Sidebar from '../components/Sidebar'
 import LinkManager from './LinkManager'
 import AnalyticsPage from './AnalyticsPage'
+import FileDashboard from '../pages/files/FileDashboard'
 
 const ProjectDetails = () => {
   const { projectId } = useParams()
@@ -14,7 +14,7 @@ const ProjectDetails = () => {
   const [shortLinks, setShortLinks] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // ← state for “which shortCode to show analytics for” 
+  // ← state for "which shortCode to show analytics for" 
   const [selectedShortCode, setSelectedShortCode] = useState(null)
 
   useEffect(() => {
@@ -68,7 +68,7 @@ const ProjectDetails = () => {
             project={project}
             shortLinks={shortLinks}
             setShortLinks={setShortLinks}
-            // ← When a specific link’s "View Analytics" is clicked…
+            // ← When a specific link's "View Analytics" is clicked…
             onViewAnalytics={(code) => {
               // …we set that shortCode, THEN switch to analytics.
               setSelectedShortCode(code)
@@ -82,6 +82,13 @@ const ProjectDetails = () => {
             project={project}
             // If selectedShortCode is null => shows project‐wide analytics
             shortCode={selectedShortCode}
+          />
+        )}
+
+        {activeTab === 'files' && (
+          <FileDashboard 
+            project={project}
+            projectId={projectId}
           />
         )}
       </main>

@@ -4,6 +4,7 @@ const Sidebar = ({ activeTab, setActiveTab, project }) => {
   const tabs = [
     { key: 'links', label: 'Links' },
     { key: 'analytics', label: 'Analytics' },
+    { key: 'files', label: 'Files' },
   ]
 
   return (

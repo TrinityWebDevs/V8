@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fileService } from '../utils/fileService';
-
+import toast from 'react-hot-toast';
 export function useProjectFiles(projectId) {
   const [files, setFiles] = useState([]);
   const [used, setUsed] = useState(0);
@@ -40,6 +40,7 @@ export function useProjectFiles(projectId) {
       await fileService.uploadFile(projectId, file);
       await new Promise(resolve => setTimeout(resolve, 500));
       await fetchFiles();
+      toast.success('File uploaded successfully');
     } catch (err) {
       setError(err.message || 'Failed to upload file');
       throw err;
