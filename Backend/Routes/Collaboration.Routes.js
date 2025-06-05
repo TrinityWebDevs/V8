@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 
 import Project from "../model/project.model.js";
 import User from "../model/user.js"; // Ensure you have a User model imported
-import shortLink from "../model/shortLink.model.js"; 
+import shortLink from "../model/shortLink.model.js";
+import ChatMessage from "../model/ChatMessage.model.js";
 
 const router = express.Router();
 
@@ -188,5 +189,44 @@ router.get("/get-project/:projectId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch project" });
   }
 })
+
+// Route to get chat history for a project
+router.get("/chat-history/:projectId", async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not Authenticated" });
+    }
+
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Invalid project ID format" });
+    }
+
+    // Verify project existence and user membership
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    if (!project.members.map(memberId => memberId.toString()).includes(userId.toString())) {
+      return res.status(403).json({ message: "You are not a member of this project and cannot view its chat history." });
+    }
+
+    const messages = await ChatMessage.find({ project: projectId })
+      .populate("user", "name photo") // Populate user's name and photo
+      .sort({ timestamp: 1 }); // Sort by oldest first
+
+    res.status(200).json({
+      message: "✅ Chat history fetched successfully",
+      chatHistory: messages,
+    });
+
+  } catch (err) {
+    console.error("Error fetching chat history:", err);
+    res.status(500).json({ message: "❌ Failed to fetch chat history" });
+  }
+});
 
 export default router;

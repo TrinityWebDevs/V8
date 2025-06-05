@@ -5,14 +5,16 @@ import axios from 'axios'
 import Sidebar from '../components/Sidebar'
 import LinkManager from './LinkManager'
 import AnalyticsPage from './AnalyticsPage'
-import FileDashboard from '../pages/files/FileDashboard'
+import FileDashboard from '../pages/files/FileDashboard';
+import ChatWindow from './ChatWindow'; // Added ChatWindow import
 
 const ProjectDetails = () => {
   const { projectId } = useParams()
   const [activeTab, setActiveTab] = useState('links')
   const [project, setProject] = useState(null)
   const [shortLinks, setShortLinks] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null); // Added state for current user
 
   // ← state for "which shortCode to show analytics for" 
   const [selectedShortCode, setSelectedShortCode] = useState(null)
@@ -33,7 +35,20 @@ const ProjectDetails = () => {
       }
     }
 
-    fetchProject()
+    fetchProject();
+
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/user', {
+          withCredentials: true,
+        });
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error('Failed to fetch current user:', error);
+        // Handle error, e.g., redirect to login or show a message
+      }
+    };
+    fetchCurrentUser();
   }, [projectId])
 
   if (loading) {
@@ -89,6 +104,12 @@ const ProjectDetails = () => {
           <FileDashboard 
             project={project}
             projectId={projectId}
+          />
+        )}
+        {activeTab === 'chat' && (
+          <ChatWindow 
+            project={project} 
+            currentUser={currentUser} 
           />
         )}
       </main>
