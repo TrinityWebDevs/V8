@@ -13,7 +13,7 @@ import projectRouter from './Routes/Collaboration.Routes.js';
 import ShortLinkRouter from './Routes/link.routes.js'; 
 import redirectRouter from './Routes/redirect.routes.js';
 import AnalyticsRouter from './Routes/analytics.routes.js'; // Import analytics routes
-
+import taskRouter from './Routes/tasks.routes.js';
 
 
 import fileRouter from './Routes/file.routes.js';
@@ -62,6 +62,7 @@ app.use('/auth', authRouter);
 app.use('/project', projectRouter); 
 app.use('/project/shortlink', ShortLinkRouter); 
 app.use('/analytics',AnalyticsRouter);
+app.use('/task', taskRouter);
 
 // Redirect route for short links
 app.use("/",redirectRouter);

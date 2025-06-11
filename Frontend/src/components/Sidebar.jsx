@@ -5,7 +5,8 @@ const Sidebar = ({ activeTab, setActiveTab, project }) => {
     { key: 'links', label: 'Links' },
     { key: 'analytics', label: 'Analytics' },
     { key: 'files', label: 'Files' },
-  ]
+    { key: 'task', label: 'Task' },
+  ] 
 
   return (
     <aside className="w-64 bg-gray-900 text-white flex-shrink-0">

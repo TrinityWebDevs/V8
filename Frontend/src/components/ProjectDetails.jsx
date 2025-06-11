@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar'
 import LinkManager from './LinkManager'
 import AnalyticsPage from './AnalyticsPage'
 import FileDashboard from '../pages/files/FileDashboard'
-
+import TaskList from './tasks/TaskList'
 const ProjectDetails = () => {
   const { projectId } = useParams()
   const [activeTab, setActiveTab] = useState('links')
@@ -90,6 +90,10 @@ const ProjectDetails = () => {
             project={project}
             projectId={projectId}
           />
+        )}
+
+        {activeTab === 'task' && (
+          <TaskList projectId={projectId} project={project} />
         )}
       </main>
     </div>
