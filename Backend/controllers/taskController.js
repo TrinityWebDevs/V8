@@ -1,4 +1,6 @@
 import Task from '../model/Task.js';
+import User from '../model/user.js';
+import { sendTaskAssignmentEmail, sendDeadlineReminderEmail } from '../utils/emailService.js';
 
 // Get all tasks for a project
 export const getTasks = async (req, res) => {
@@ -35,6 +37,15 @@ export const createTask = async (req, res) => {
   try {
     const task = new Task(req.body);
     await task.save();
+
+    // Send emails to all assigned users
+    for (const userId of task.assignedTo) {
+      const user = await User.findById(userId);
+      if (user) {
+        await sendTaskAssignmentEmail(user, task);
+      }
+    }
+
     res.status(201).json(task);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -44,6 +55,7 @@ export const createTask = async (req, res) => {
 // Update task
 export const updateTask = async (req, res) => {
   try {
+    const oldTask = await Task.findById(req.params.id);
     const task = await Task.findByIdAndUpdate(
       req.params.id,
       { ...req.body, updatedAt: Date.now() },
@@ -53,6 +65,20 @@ export const updateTask = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+
+    // Check if assigned users have changed
+    const newAssignedUsers = task.assignedTo.filter(
+      userId => !oldTask.assignedTo.includes(userId)
+    );
+
+    // Send emails to newly assigned users
+    for (const userId of newAssignedUsers) {
+      const user = await User.findById(userId);
+      if (user) {
+        await sendTaskAssignmentEmail(user, task);
+      }
+    }
+
     res.json(task);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -121,5 +147,32 @@ export const stopTimer = async (req, res) => {
     res.json(task);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Add a new function to check deadlines and send reminders
+export const checkDeadlines = async () => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const tasks = await Task.find({
+      deadline: {
+        $gte: today,
+        $lt: tomorrow
+      },
+      status: { $ne: 'completed' }
+    }).populate('assignedTo');
+
+    for (const task of tasks) {
+      for (const user of task.assignedTo) {
+        await sendDeadlineReminderEmail(user, task);
+      }
+    }
+  } catch (error) {
+    console.error('Error checking deadlines:', error);
   }
 }; 
