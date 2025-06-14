@@ -20,6 +20,7 @@ import redirectRouter from "./Routes/redirect.routes.js";
 import AnalyticsRouter from "./Routes/analytics.routes.js";
 import taskRouter from './Routes/tasks.routes.js';
 import fileRouter from "./Routes/file.routes.js";
+import noteRoutes from "./Routes/note.routes.js";
 dotenv.config();
 
 const app = express();
@@ -439,6 +440,7 @@ app.use("/auth", authRouter);
 app.use("/project", projectRouter);
 app.use("/project/shortlink", ShortLinkRouter);
 app.use("/analytics", AnalyticsRouter);
+app.use("/api/notes", noteRoutes);
 app.use('/task', taskRouter);
 
 app.use("/", redirectRouter);

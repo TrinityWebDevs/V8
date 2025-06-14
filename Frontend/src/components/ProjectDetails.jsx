@@ -8,6 +8,7 @@ import AnalyticsPage from './AnalyticsPage'
 import FileDashboard from '../pages/files/FileDashboard';
 import ChatWindow from './ChatWindow'; // Added ChatWindow import
 import TaskList from './tasks/TaskList'
+import Notes from './notes/Notes'; 
 const ProjectDetails = () => {
   const { projectId } = useParams()
   const [activeTab, setActiveTab] = useState('links')
@@ -115,6 +116,10 @@ const ProjectDetails = () => {
             project={project} 
             currentUser={currentUser} 
           />
+        )}
+
+        {activeTab === 'notes' && (
+            <Notes project={project} />
         )}
       </main>
     </div>

@@ -30,7 +30,7 @@ createRoot(document.getElementById('root')).render(
               background: '#363636',
               color: '#fff',
             },
-          }}
+          }}  
         /> */}
         <AppWithNavbar />
       </BrowserRouter>
