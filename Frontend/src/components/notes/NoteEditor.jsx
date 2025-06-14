@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react'
+// src/components/NoteEditor.jsx
+import React, { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -27,24 +28,16 @@ export default function NoteEditor({ content, onUpdate }) {
       StarterKit.configure({
         heading: {
           levels: [1, 2],
-          HTMLAttributes: {
-            class: 'font-bold',
-          },
+          HTMLAttributes: { class: 'font-bold' },
         },
         bulletList: {
-          HTMLAttributes: {
-            class: 'list-disc pl-5',
-          },
+          HTMLAttributes: { class: 'list-disc pl-5' },
         },
         orderedList: {
-          HTMLAttributes: {
-            class: 'list-decimal pl-5',
-          },
+          HTMLAttributes: { class: 'list-decimal pl-5' },
         },
       }),
-      Placeholder.configure({
-        placeholder: 'Start typing your note...',
-      }),
+      Placeholder.configure({ placeholder: 'Start typing your note...' }),
       Underline,
       Link.configure({
         openOnClick: false,
@@ -55,20 +48,11 @@ export default function NoteEditor({ content, onUpdate }) {
           rel: 'noopener noreferrer',
         },
       }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Highlight,
       CharacterCount.configure({ limit: 1000000 }),
     ],
-    content: content || {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-        }
-      ]
-    },
+    content: content || { type: 'doc', content: [{ type: 'paragraph' }] },
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
       onUpdate(json)
@@ -81,19 +65,26 @@ export default function NoteEditor({ content, onUpdate }) {
     },
   })
 
-  // Check if a format is active
-  const isActive = (format, options = {}) => {
-    return editor ? editor.isActive(format, options) : false
-  }
+  // Sync external content only when editor not focused and content changed
+  useEffect(() => {
+    if (!editor) return
+    if (!content) return
+    if (!editor.isFocused) {
+      const current = editor.getJSON()
+      if (JSON.stringify(current) !== JSON.stringify(content)) {
+        editor.commands.setContent(content)
+      }
+    }
+  }, [content, editor])
 
-  // Link button handler
+  const isActive = (format, options = {}) =>
+    editor ? editor.isActive(format, options) : false
+
   const handleLink = () => {
     if (!editor) return
     const previousUrl = editor.getAttributes('link').href
     const url = window.prompt('URL', previousUrl || 'https://')
-    
     if (url === null) return
-    
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()
     } else {
@@ -105,23 +96,10 @@ export default function NoteEditor({ content, onUpdate }) {
     }
   }
 
-  // Heading handlers
-  const handleHeading1 = () => {
-    editor.chain().focus().toggleHeading({ level: 1 }).run()
-  }
-
-  const handleHeading2 = () => {
-    editor.chain().focus().toggleHeading({ level: 2 }).run()
-  }
-
-  // List handlers
-  const handleBulletList = () => {
-    editor.chain().focus().toggleBulletList().run()
-  }
-
-  const handleOrderedList = () => {
-    editor.chain().focus().toggleOrderedList().run()
-  }
+  const handleHeading1 = () => editor.chain().focus().toggleHeading({ level: 1 }).run()
+  const handleHeading2 = () => editor.chain().focus().toggleHeading({ level: 2 }).run()
+  const handleBulletList = () => editor.chain().focus().toggleBulletList().run()
+  const handleOrderedList = () => editor.chain().focus().toggleOrderedList().run()
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">

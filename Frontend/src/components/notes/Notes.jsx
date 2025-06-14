@@ -1,3 +1,4 @@
+// src/components/Notes.jsx
 import React, { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
 import NoteEditor from './NoteEditor'
@@ -16,8 +17,9 @@ export default function Notes({ project }) {
   const [loadingNotes, setLoadingNotes] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Fetch notes for this project
+  // Fetch notes for this project, with robust selectedNote refresh
   const fetchNotes = async () => {
+    if (!project?._id) return
     setLoadingNotes(true)
     try {
       const res = await axios.get(
@@ -25,32 +27,49 @@ export default function Notes({ project }) {
         { withCredentials: true }
       )
       const data = res.data || []
+      console.log('Fetched notes:', data)
       setNotes(data)
-      // If nothing selected, auto-select first note
-      if (!selectedNote && data.length > 0) {
-        setSelectedNote(data[0])
-      } else if (selectedNote) {
-        // if selectedNote got deleted externally, clear
-        const exists = data.some((n) => n._id === selectedNote._id)
-        if (!exists) {
+
+      if (selectedNote) {
+        // If a note was previously selected, refresh it if still present
+        const fresh = data.find(n => n._id === selectedNote._id)
+        if (fresh) {
+          setSelectedNote(fresh)
+          setLocalContent(fresh.content)
+          setLocalTitle(fresh.title || '')
+        } else if (data.length > 0) {
+          // previously selected deleted, pick first
+          setSelectedNote(data[0])
+        } else {
+          setSelectedNote(null)
+        }
+      } else {
+        // No previously selected, pick first if exists
+        if (data.length > 0) {
+          setSelectedNote(data[0])
+        } else {
           setSelectedNote(null)
         }
       }
     } catch (err) {
-      console.error(err)
+      console.error('fetchNotes error', err)
       toast.error('Failed to fetch notes')
     } finally {
       setLoadingNotes(false)
     }
   }
 
+  // On mount or when project changes, fetch notes
   useEffect(() => {
     fetchNotes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project._id])
 
-  // When selectedNote changes, init local buffers
+  // When selectedNote changes, initialize local buffers and cancel pending saves
   useEffect(() => {
+    // Cancel any pending save for previous note
+    debouncedSave.cancel()
+
     if (selectedNote) {
       setLocalContent(selectedNote.content)
       setLocalTitle(selectedNote.title || '')
@@ -63,6 +82,7 @@ export default function Notes({ project }) {
   // Debounced save: title + content
   const debouncedSave = useRef(
     debounce(async (noteId, title, content) => {
+      console.log('debouncedSave for noteId=', noteId)
       try {
         setSaving(true)
         const res = await axios.put(
@@ -70,13 +90,15 @@ export default function Notes({ project }) {
           { title, content },
           { withCredentials: true }
         )
+        console.log('Save response', res.data)
         const updatedNote = res.data
-        setNotes((prev) =>
-          prev.map((n) => (n._id === noteId ? updatedNote : n))
+        // Update notes array and selectedNote
+        setNotes(prev =>
+          prev.map(n => (n._id === noteId ? updatedNote : n))
         )
         setSelectedNote(updatedNote)
       } catch (err) {
-        console.error(err)
+        console.error('Save error', err)
         toast.error('Failed to save note')
       } finally {
         setSaving(false)
@@ -84,26 +106,28 @@ export default function Notes({ project }) {
     }, 1500)
   ).current
 
-  // Handlers for editor updates
+  // Handler for content updates from NoteEditor
   const handleContentChange = (json) => {
     setLocalContent(json)
     if (selectedNote) {
       debouncedSave(selectedNote._id, localTitle, json)
     }
   }
-  
+
+  // Handler for title changes
   const handleTitleChange = (e) => {
     const title = e.target.value
     setLocalTitle(title)
     if (selectedNote) {
-      // Optimistic update
+      // Optimistically update sidebar list
       setNotes(prev =>
         prev.map(n =>
           n._id === selectedNote._id ? { ...n, title } : n
         )
       )
+      // Update selectedNote state
       setSelectedNote(prev => prev ? { ...prev, title } : prev)
-      // Debounced save
+      // Schedule save
       debouncedSave(selectedNote._id, title, localContent)
     }
   }
@@ -120,12 +144,14 @@ export default function Notes({ project }) {
         },
         { withCredentials: true }
       )
+      console.log('Created note', res.data)
       toast.success('Note created')
       const newNote = res.data
-      setNotes((prev) => [newNote, ...prev])
+      // Prepend to notes list
+      setNotes(prev => [newNote, ...prev])
       setSelectedNote(newNote)
     } catch (err) {
-      console.error(err)
+      console.error('Create note error', err)
       toast.error('Failed to create note')
     }
   }
@@ -137,13 +163,14 @@ export default function Notes({ project }) {
       await axios.delete(`${BACKEND}/api/notes/${noteId}`, {
         withCredentials: true,
       })
+      console.log('Deleted note', noteId)
       toast.success('Note deleted')
-      setNotes((prev) => prev.filter((n) => n._id !== noteId))
+      setNotes(prev => prev.filter(n => n._id !== noteId))
       if (selectedNote?._id === noteId) {
         setSelectedNote(null)
       }
     } catch (err) {
-      console.error(err)
+      console.error('Delete error', err)
       toast.error('Failed to delete')
     }
   }
@@ -153,11 +180,11 @@ export default function Notes({ project }) {
     return () => {
       debouncedSave.flush()
     }
-  }, [debouncedSave])
+  }, [])
 
   // Filtered notes by searchTerm
-  const filteredNotes = notes.filter((note) =>
-    (note.title || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredNotes = notes.filter(n =>
+    (n.title || '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -182,7 +209,7 @@ export default function Notes({ project }) {
               type="text"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-8 pr-2 py-1 rounded bg-gray-100 dark:bg-gray-700 focus:outline-none"
             />
           </div>
@@ -239,10 +266,9 @@ export default function Notes({ project }) {
               />
             </div>
             {/* Editor */}
-            <NoteEditor 
-              key={selectedNote._id}
-              content={localContent} 
-              onUpdate={handleContentChange} 
+            <NoteEditor
+              content={localContent}
+              onUpdate={handleContentChange}
             />
             {/* Save status */}
             <div className="p-2 text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
