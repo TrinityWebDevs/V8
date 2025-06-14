@@ -7,6 +7,7 @@ const Sidebar = ({ activeTab, setActiveTab, project }) => {
     { key: 'files', label: 'Files' },
     { key: 'task', label: 'Task' },
     { key: 'chat', label: 'Chat' }, 
+    { key: 'notes', label: 'Notes' },
   ] 
 
   return (
