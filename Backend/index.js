@@ -19,7 +19,7 @@ import { getGeminiResponse } from "./services/geminiService.js";
 import projectRouter from "./Routes/Collaboration.Routes.js";
 import ShortLinkRouter from "./Routes/link.routes.js";
 import redirectRouter from "./Routes/redirect.routes.js";
-import AnalyticsRouter from "./Routes/analytics.routes.js";
+import AnalyticsRouter from "./Routes/Analytics.routes.js";
 import taskRouter from './Routes/tasks.routes.js';
 import fileRouter from "./Routes/file.routes.js";
 import noteRoutes from "./Routes/note.routes.js";
