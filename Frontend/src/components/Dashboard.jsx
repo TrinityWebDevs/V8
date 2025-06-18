@@ -6,13 +6,13 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    axios.get('http://localhost:3000/api/user', { withCredentials: true })
+    axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user`, { withCredentials: true })
       .then(res => setUser(res.data))
       .catch(() => setUser(null));
   }, []);
 
   const logout = () => {
-    window.open('http://localhost:3000/auth/logout', '_self');
+    window.open(`${import.meta.env.VITE_BACKEND_URL}/auth/logout`, '_self');
   };
 
   if (!user) {

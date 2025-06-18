@@ -20,7 +20,7 @@ const ProjectDashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/project/my-projects', { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/project/my-projects`, { withCredentials: true });
       setProjects(res.data.projects);
     } catch (err) {
       console.error(err);
@@ -33,7 +33,7 @@ const ProjectDashboard = () => {
     setShowPopup(true);
     const results = await Promise.all(
       project.members.map((id) =>
-        axios.post('http://localhost:3000/project/get-member-details', { userId: id }, { withCredentials: true })
+        axios.post(`${import.meta.env.VITE_BACKEND_URL}/project/get-member-details`, { userId: id }, { withCredentials: true })
       )
     );
     setMembers(results.map((res) => res.data.user));
@@ -54,7 +54,7 @@ const ProjectDashboard = () => {
 
     try {
       const res = await axios.post(
-        'http://localhost:3000/project/search-users',
+        `${import.meta.env.VITE_BACKEND_URL}/project/search-users`,
         { namePrefix: value },
         { withCredentials: true }
       );
@@ -67,7 +67,7 @@ const ProjectDashboard = () => {
   const handleAddMember = async (userId) => {
     try {
       await axios.post(
-        'http://localhost:3000/project/add-members',
+        `${import.meta.env.VITE_BACKEND_URL}/project/add-members`,
         { projectName: selectedProject.name, userIds: [userId] },
         { withCredentials: true }
       );
@@ -97,7 +97,7 @@ const ProjectDashboard = () => {
 
     try {
       await axios.post(
-        'http://localhost:3000/project/new-project',
+        `${import.meta.env.VITE_BACKEND_URL}/project/new-project`,
         { 
           name: newProjectName.trim(),
           description: newProjectDescription.trim() 

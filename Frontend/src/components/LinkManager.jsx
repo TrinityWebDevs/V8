@@ -9,7 +9,7 @@ import {
   BarChart2,
 } from 'lucide-react'
 
-const BACKEND = 'http://localhost:3000'
+const BACKEND = import.meta.env.VITE_BACKEND_URL
 const domains = [window.location.host]
 
 const generateRandomCode = () => Math.random().toString(36).substring(2, 8)

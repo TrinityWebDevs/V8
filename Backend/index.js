@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import mongoose from "mongoose";
 import session from "express-session";
@@ -6,6 +7,7 @@ import { RedisStore } from "connect-redis";
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import './utils/scheduler.js';
 import dotenv from "dotenv";
 import authRouter from "./Routes/Auth.Routes.js";
 import "./auth/google.js";
@@ -21,6 +23,10 @@ import AnalyticsRouter from "./Routes/analytics.routes.js";
 import taskRouter from './Routes/tasks.routes.js';
 import fileRouter from "./Routes/file.routes.js";
 import noteRoutes from "./Routes/note.routes.js";
+import monitorRoutes from './Routes/monitor.routes.js';
+import {Monitor} from './model/monitor.js';
+import { URL } from 'url';
+import { spawn } from 'child_process';
 dotenv.config();
 
 const app = express();
@@ -35,10 +41,12 @@ mongoose.connect(process.env.MONGO_URI, {
 });
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST"],
   },
 });
+
+global.io = io;
 
 io.on("connection", (socket) => {
   console.log("✅ User connected to Socket.IO:", socket.id);
@@ -347,6 +355,53 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on('run:diagnostic', async ({ monitorId, tool }) => {
+    try {
+      const monitor = await Monitor.findById(monitorId);
+      if (!monitor) {
+        socket.emit('diagnostic:error', 'Monitor not found.');
+        return;
+      }
+
+      const url = new URL(monitor.url);
+      const hostname = url.hostname;
+
+      let cmd;
+      let args;
+
+      if (tool === 'ping') {
+        cmd = 'ping';
+        args = ['-c', '5', hostname]; // 5 pings
+      } else if (tool === 'traceroute') {
+        cmd = 'traceroute';
+        args = [hostname];
+      } else {
+        socket.emit('diagnostic:error', 'Invalid tool specified.');
+        return;
+      }
+
+      const child = spawn(cmd, args);
+
+      socket.emit('diagnostic:output', `> Running ${tool} on ${hostname}...\n`);
+
+      child.stdout.on('data', (data) => {
+        socket.emit('diagnostic:output', data.toString());
+      });
+
+      child.stderr.on('data', (data) => {
+        socket.emit('diagnostic:output', `ERROR: ${data.toString()}`);
+      });
+
+      child.on('close', (code) => {
+        socket.emit('diagnostic:end', `> Process exited with code ${code}\n`);
+      });
+
+    } catch (error) {
+      console.error('Diagnostic error:', error);
+      socket.emit('diagnostic:error', 'An internal error occurred while running the diagnostic tool.');
+    }
+  });
+
   socket.on("disconnect", () => {
     const { currentProjectId, currentUserId } = socket;
     if (currentProjectId && currentUserId) {
@@ -387,7 +442,7 @@ async function dbConnect() {
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
@@ -442,6 +497,7 @@ app.use("/project/shortlink", ShortLinkRouter);
 app.use("/analytics", AnalyticsRouter);
 app.use("/api/notes", noteRoutes);
 app.use('/task', taskRouter);
+app.use('/api/monitors', monitorRoutes);
 
 app.use("/", redirectRouter);
 app.use("/file", fileRouter);

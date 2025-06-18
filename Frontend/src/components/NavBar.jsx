@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BACKEND } from '../utils/config.js';
 import axios from 'axios';
 
 export default function Navbar() {
@@ -6,13 +7,13 @@ export default function Navbar() {
   
   useEffect(() => {
     // Fetch user data directly in the navbar
-    axios.get('http://localhost:3000/api/user', { withCredentials: true })
+    axios.get(`${BACKEND}/api/user`, { withCredentials: true })
       .then(res => setUser(res.data))
       .catch(() => setUser(null));
   }, []);
 
   const logout = () => {
-    window.open('http://localhost:3000/auth/logout', '_self');
+    window.open(`${BACKEND}/auth/logout`, '_self');
   };
 
   return (

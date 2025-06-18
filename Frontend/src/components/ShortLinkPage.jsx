@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
-const BACKEND = 'http://localhost:3000';
+const BACKEND = import.meta.env.VITE_BACKEND_URL;
 
 export default function ShortLinkPage() {
   const { shortCode } = useParams();

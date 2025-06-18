@@ -1,9 +1,11 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL;
+
 const Index = () => {
   const login = () => {
-    window.open('http://localhost:3000/auth/google', '_self');
+    window.open(`${BACKEND}/auth/google`, '_self');
   };
 
   return (

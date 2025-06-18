@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a pre-configured Axios instance
 const apiClient = axios.create({
-  baseURL: 'http://localhost:3000/task',
+  baseURL: `${import.meta.env.VITE_BACKEND_URL}/task`,
   withCredentials: true, // Allow sending cookies
   headers: {
     'Content-Type': 'application/json'

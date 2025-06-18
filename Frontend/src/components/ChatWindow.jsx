@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BACKEND } from '../utils/config.js';
 import io from 'socket.io-client';
 import axios from 'axios'; // Re-added for fetchChatHistory
 import ReactMarkdown from 'react-markdown';
@@ -32,7 +33,7 @@ const ChatWindow = ({ project, currentUser }) => {
       return;
     }
 
-    const newSocketInstance = io('http://localhost:3000');
+    const newSocketInstance = io(BACKEND);
     setSocket(newSocketInstance); // Store the single socket instance
 
     newSocketInstance.on('connect', () => {
@@ -140,7 +141,7 @@ const ChatWindow = ({ project, currentUser }) => {
     const fetchChatHistory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/project/chat-history/${project._id}`,
+          `${BACKEND}/project/chat-history/${project._id}`,
           { withCredentials: true }
         );
         setMessages(response.data.chatHistory || []);

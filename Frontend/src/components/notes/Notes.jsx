@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import debounce from 'lodash.debounce'
 import { FileText as FileTextIcon, Search as SearchIcon } from 'lucide-react'
 
-const BACKEND = 'http://localhost:3000' // adjust if needed
+const BACKEND = import.meta.env.VITE_BACKEND_URL // adjust if needed
 
 export default function Notes({ project }) {
   const [notes, setNotes] = useState([])

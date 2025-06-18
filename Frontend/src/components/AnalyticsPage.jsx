@@ -24,7 +24,7 @@ ChartJS.register(
   Legend
 )
 
-const BACKEND = 'http://localhost:3000'
+const BACKEND = import.meta.env.VITE_BACKEND_URL
 
 export default function AnalyticsPage({ project, shortCode }) {
   const projectId = project._id

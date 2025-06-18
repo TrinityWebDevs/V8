@@ -16,7 +16,7 @@ router.get(
   '/google/callback',
   passport.authenticate('google', {
     failureRedirect: '/login',
-    successRedirect: 'http://localhost:5173/dashboard'
+    successRedirect: process.env.FRONTEND_URL + '/dashboard'
   })
 );
 
@@ -27,7 +27,7 @@ router.get('/logout', (req, res) => {
     httpOnly: false,
     sameSite: 'none'
   });
-  res.redirect('http://localhost:5173/');
+  res.redirect(process.env.FRONTEND_URL + '/');
 });
 
 export default router;

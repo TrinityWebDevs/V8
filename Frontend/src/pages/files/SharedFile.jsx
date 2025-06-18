@@ -11,11 +11,11 @@ export default function SharedFile() {
     const fetchFile = async () => {
       try {
         // Make a HEAD request first to check if file exists
-        const response = await axios.get(`http://localhost:3000/file/share/${shareId}`);
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/file/share/${shareId}`);
         console.log(response , "response" );
         
         // If file exists, redirect to the download URL
-        window.location.href = `http://localhost:3000/file/share/${shareId}`;
+        window.location.href = `${import.meta.env.VITE_BACKEND_URL}/file/share/${shareId}`;
       } catch (err) {
         console.error('Error accessing file:', err);
         setError('File not found or access denied');

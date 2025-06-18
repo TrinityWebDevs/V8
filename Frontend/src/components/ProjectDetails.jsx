@@ -9,6 +9,7 @@ import FileDashboard from '../pages/files/FileDashboard';
 import ChatWindow from './ChatWindow'; // Added ChatWindow import
 import TaskList from './tasks/TaskList'
 import Notes from './notes/Notes'; 
+import UptimeMonitor from './UptimeMonitor'; 
 const ProjectDetails = () => {
   const { projectId } = useParams()
   const [activeTab, setActiveTab] = useState('links')
@@ -24,7 +25,7 @@ const ProjectDetails = () => {
     const fetchProject = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/project/get-project/${projectId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/project/get-project/${projectId}`,
           { withCredentials: true }
         )
         setProject(response.data.project)
@@ -40,7 +41,7 @@ const ProjectDetails = () => {
 
     const fetchCurrentUser = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/user', {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
           withCredentials: true,
         });
         setCurrentUser(response.data);
@@ -120,6 +121,10 @@ const ProjectDetails = () => {
 
         {activeTab === 'notes' && (
             <Notes project={project} />
+        )}
+
+        {activeTab === 'uptime' && (
+          <UptimeMonitor project={project} />
         )}
       </main>
     </div>

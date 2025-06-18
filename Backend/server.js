@@ -1,4 +1,7 @@
 // Import the scheduler
 import './utils/scheduler.js';
 
-// ... rest of the server code ... 
+// Import taskRoutes from './Routes/tasks.routes.js';
+import monitorRoutes from './Routes/monitor.routes.js';
+
+// ... rest of the server code ...
