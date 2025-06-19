@@ -482,10 +482,12 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: { 
-      secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
-      httpOnly: true, // Mitigates XSS
-      maxAge: 24 * 60 * 60 * 1000 // 1 day
-    },
+    secure: true,
+    httpOnly: true,
+    sameSite: 'None', // <--- CRITICAL!
+    maxAge: 24 * 60 * 60 * 1000*30
+}
+
   })
 );
 app.use(passport.initialize());
