@@ -4,7 +4,6 @@ import ShortLink from '../model/shortLink.model.js';
 import ClickLog from '../model/clickLog.model.js';
 import * as UAParser from 'ua-parser-js';
 
-
 const router = express.Router();
 const IPAPI_KEY = process.env.IPAPI_KEY; 
 
@@ -32,47 +31,68 @@ router.get('/:shortCode', async (req, res) => {
     await link.save();
 
     // Collect click data
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
     const referrer = req.get('Referrer') || null;
     const userAgent = req.get('User-Agent') || null;
 
-    // Use ua-parser-js
+    // Parse user agent
     const parser = new UAParser.UAParser();
     parser.setUA(userAgent);
-
     const browser = parser.getBrowser().name || 'Unknown';
     const os = parser.getOS().name || 'Unknown';
     const deviceType = parser.getDevice().type || 'Desktop';
 
-    let geo = {};
+    // Default geo data
+    let geo = {
+      country: '',
+      region: '',
+      city: ''
+    };
 
-    // Geolocation request using ipapi.com
-    try {
-        const geoRes = await axios.get(`http://api.ipapi.com/${ip}?access_key=${IPAPI_KEY}`);
-        const geoData = geoRes.data;
+    // Check for private/local IPs
+    const privateIPRegex = /^(::1|::ffff:127\.|fe80::|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/i;
+    const isPrivateIP = privateIPRegex.test(ip);
+
+    // Handle localhost separately
+    if (ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.')) {
+      geo = { 
+        country: 'Localhost', 
+        region: 'Development', 
+        city: 'Local' 
+      };
+    }
+    // Make API call for public IPs with valid key
+    else if (IPAPI_KEY && !isPrivateIP) {
+      try {
+        const geoRes = await axios.get(
+          `https://api.ipapi.com/${ip}?access_key=${IPAPI_KEY}`,
+          { timeout: 5000 }  // 5-second timeout
+        );
+        
         geo = {
-          country: geoData.country_name || '',
-          region: geoData.region_name || '',
-          city: geoData.city || ''
+          country: geoRes.data.country_name || '',
+          region: geoRes.data.region_name || '',
+          city: geoRes.data.city || ''
         };
-    } catch (err) {
-        console.warn('Geo lookup failed:', err.message);
+      } catch (err) {
+        console.warn('Geo lookup failed:', 
+          err.response?.data?.error?.info || err.message
+        );
+      }
     }
 
-    
-  
+    // Create click log
     await ClickLog.create({
-        shortLink: link._id,
-        ip,
-        timestamp: new Date(),
-        referrer,
-        userAgent,
-        browser,
-        os,
-        deviceType,
-        geo
+      shortLink: link._id,
+      ip,
+      timestamp: new Date(),
+      referrer,
+      userAgent,
+      browser,
+      os,
+      deviceType,
+      geo
     });
-  
 
     return res.redirect(link.originalUrl);
   } catch (err) {
